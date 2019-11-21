@@ -21,10 +21,6 @@ static inline void *get_system_memory_adr() {
 	return memory_addr;
 }
 
-static inline size_t get_system_memory_size() {
-	return *(size_t*)memory_addr;
-}
-
 
 /* struct for free block */
 struct fb {
@@ -41,6 +37,10 @@ struct first_bloc {
 };
 
 
+static inline size_t get_system_memory_size() {
+	return ((struct first_bloc*)memory_addr)->sizeG;
+}
+
 
 void mem_init(void* mem, size_t taille)
 {
@@ -48,6 +48,8 @@ void mem_init(void* mem, size_t taille)
         memory_addr = mem;
         ((struct first_bloc*)memory_addr)->sizeG = taille;
         ((struct first_bloc*)memory_addr)->begin = memory_addr + 1;
+        ((struct first_bloc*)memory_addr)->begin->next = NULL;
+        ((struct first_bloc*)memory_addr)->begin->size = taille - sizeof(struct first_bloc*);
 	assert(mem == get_system_memory_adr());
 	assert(taille == get_system_memory_size());
 
