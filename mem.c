@@ -26,6 +26,7 @@ static inline size_t get_system_memory_size() {
 }
 
 
+/* struct for free block */
 struct fb {
 	size_t size;
 	struct fb* next;
@@ -34,13 +35,22 @@ struct fb {
 
 typedef struct fb* pfb;
 
+struct first_bloc {
+	size_t sizeG;
+	pfb begin;
+};
+
+
 
 void mem_init(void* mem, size_t taille)
 {
+	/* Création du bloc jaune */
         memory_addr = mem;
-        *(size_t*)memory_addr = taille;
+        ((struct first_bloc*)memory_addr)->sizeG = taille;
+        ((struct first_bloc*)memory_addr)->begin = memory_addr + 1;
 	assert(mem == get_system_memory_adr());
 	assert(taille == get_system_memory_size());
+
 	/* ... */
 	mem_fit(&mem_fit_first);
 }
