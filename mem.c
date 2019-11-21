@@ -12,6 +12,19 @@
 #define ALIGNMENT 16
 #endif
 
+/* La seule variable globale autorisée
+ * On trouve à cette adresse la taille de la zone mémoire
+ */
+static void* memory_addr;
+
+static inline void *get_system_memory_adr() {
+	return memory_addr;
+}
+
+static inline size_t get_system_memory_size() {
+	return *(size_t*)memory_addr;
+}
+
 
 struct fb {
 	size_t size;
@@ -19,11 +32,15 @@ struct fb {
 	/* ... */
 };
 
+typedef struct fb* pfb;
+
 
 void mem_init(void* mem, size_t taille)
 {
-	assert(mem == get_memory_adr());
-	assert(taille == get_memory_size());
+        memory_addr = mem;
+        *(size_t*)memory_addr = taille;
+	assert(mem == get_system_memory_adr());
+	assert(taille == get_system_memory_size());
 	/* ... */
 	mem_fit(&mem_fit_first);
 }
