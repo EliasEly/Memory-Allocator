@@ -26,7 +26,6 @@ static inline void *get_system_memory_adr() {
 struct fb {
 	size_t size;
 	struct fb* next;
-	/* ... */
 };
 
 typedef struct fb* pfb;
@@ -60,18 +59,21 @@ void mem_init(void* mem, size_t taille)
         ((first_bloc*)memory_addr)->begin->size = taille - sizeof(struct first_bloc*);
 	assert(mem == get_system_memory_adr());
 	assert(taille == get_system_memory_size());
-
-	/* ... */
 	mem_fit(&mem_fit_first);
 }
 
 void mem_show(void (*print)(void *, size_t, int)) {
-	pfb begin = ((first_bloc*)memory_addr)->begin;
-	while (begin != NULL) {
-		if (begin + begin->size != begin->next){
-			print(/* ... */NULL, /* ... */0, /* ... */0);
+	pfb free_bloc = ((first_bloc*)memory_addr)->begin;
+	bloc_used* moving = memory_addr + sizeof(first_bloc);
+
+	while(moving != get_system_memory_adr() + get_system_memory_size()){
+		if (moving != free_bloc){
+			print(moving, moving->sizeUsed, 0);
+		} else {
+			print(moving, moving->sizeUsed, 1);
+			free_bloc = free_bloc->next;
 		}
-		/* ... */
+		moving = moving + moving->sizeUsed;
 	}
 }
 
@@ -82,7 +84,6 @@ void mem_fit(mem_fit_function_t *f) {
 }
 
 void *mem_alloc(size_t taille) {
-	/* ... */
 	/* __attribute__((unused))  juste pour que gcc compile ce squelette avec -Werror */
 	struct fb *fb=mem_fit_fn( ((first_bloc*)memory_addr)->begin, taille);
 	if(fb != NULL){
@@ -108,7 +109,7 @@ void mem_free(void* mem) {
 
 
 struct fb* mem_fit_first(struct fb *list, size_t size) {
-	while(size > list->size){
+	while(size > list->size + sizeof(bloc_used)){
 		if (list->next == NULL){
 			return NULL;
 		}
