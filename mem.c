@@ -31,14 +31,22 @@ struct fb {
 
 typedef struct fb* pfb;
 
-struct first_bloc {
+struct first_bloc_ {
 	size_t sizeG;
 	pfb begin;
 };
 
+typedef struct first_bloc_ first_bloc;
+
+struct bloc_used_ {
+	size_t sizeUsed;
+};
+
+typedef struct bloc_used_ bloc_used;
+
 
 static inline size_t get_system_memory_size() {
-	return ((struct first_bloc*)memory_addr)->sizeG;
+	return ((first_bloc*)memory_addr)->sizeG;
 }
 
 
@@ -46,10 +54,10 @@ void mem_init(void* mem, size_t taille)
 {
 	/* Création du bloc jaune */
         memory_addr = mem;
-        ((struct first_bloc*)memory_addr)->sizeG = taille;
-        ((struct first_bloc*)memory_addr)->begin = memory_addr + 1;
-        ((struct first_bloc*)memory_addr)->begin->next = NULL;
-        ((struct first_bloc*)memory_addr)->begin->size = taille - sizeof(struct first_bloc*);
+        ((first_bloc*)memory_addr)->sizeG = taille;
+        ((first_bloc*)memory_addr)->begin = memory_addr + 1;
+        ((first_bloc*)memory_addr)->begin->next = NULL;
+        ((first_bloc*)memory_addr)->begin->size = taille - sizeof(struct first_bloc*);
 	assert(mem == get_system_memory_adr());
 	assert(taille == get_system_memory_size());
 
@@ -58,10 +66,11 @@ void mem_init(void* mem, size_t taille)
 }
 
 void mem_show(void (*print)(void *, size_t, int)) {
-	/* ... */
-	while (/* ... */ 0) {
-		/* ... */
-		print(/* ... */NULL, /* ... */0, /* ... */0);
+	pfb begin = ((first_bloc*)memory_addr)->begin;
+	while (begin != NULL) {
+		if (begin + begin->size != begin->next){
+			print(/* ... */NULL, /* ... */0, /* ... */0);
+		}
 		/* ... */
 	}
 }
@@ -75,10 +84,10 @@ void mem_fit(mem_fit_function_t *f) {
 void *mem_alloc(size_t taille) {
 	/* ... */
 	/* __attribute__((unused))  juste pour que gcc compile ce squelette avec -Werror */
-	struct fb *fb=mem_fit_fn( ((struct first_bloc*)memory_addr)->begin, taille);
+	struct fb *fb=mem_fit_fn( ((first_bloc*)memory_addr)->begin, taille);
 	if(fb != NULL){
 		struct fb temp;
-		pfb previous = ((struct first_bloc*)memory_addr)->begin;
+		pfb previous = ((first_bloc*)memory_addr)->begin;
 
 		/* finir d'update l'allocation */
 		temp = *fb;
