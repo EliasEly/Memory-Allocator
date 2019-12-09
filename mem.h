@@ -6,7 +6,14 @@ struct fb;
 
 /* fonctions principales de l'allocateur */
 void mem_init(void* mem, size_t taille);
+
+/**
+ * Cette procédure reçoit en paramètre la taille size de la zone à allouer. 
+ * @returns Elle retourne un pointeur vers la zone allouée et NULL en cas d'allocation impossible.
+ * 
+ */
 void* mem_alloc(size_t size);
+
 void mem_free(void *ptr);
 void* mem_realloc(void *old, size_t new_size);
 

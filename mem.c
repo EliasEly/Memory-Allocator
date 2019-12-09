@@ -12,40 +12,92 @@
 #define ALIGNMENT 16
 #endif
 
+/* La seule variable globale autorisée
+ * On trouve à cette adresse la taille de la zone mémoire
+ */
+static void* memory_addr;
 
+static inline void *get_system_memory_adr() {
+	return memory_addr;
+}
+
+
+/* struct for free block */
 struct fb {
 	size_t size;
 	struct fb* next;
 	/* ... */
 };
 
+typedef struct fb* pfb;
+
+struct first_bloc_ {
+	size_t sizeG;
+	pfb begin;
+};
+
+typedef struct first_bloc_ first_bloc;
+
+struct bloc_used_ {
+	size_t sizeUsed;
+};
+
+typedef struct bloc_used_ bloc_used;
+
+
+static inline size_t get_system_memory_size() {
+	return ((first_bloc*)memory_addr)->sizeG;
+}
+
 
 void mem_init(void* mem, size_t taille)
 {
-	assert(mem == get_memory_adr());
-	assert(taille == get_memory_size());
+	/* Création du bloc jaune */
+        memory_addr = mem;
+        ((first_bloc*)memory_addr)->sizeG = taille;
+        ((first_bloc*)memory_addr)->begin = memory_addr + 1;
+        ((first_bloc*)memory_addr)->begin->next = NULL;
+        ((first_bloc*)memory_addr)->begin->size = taille - sizeof(struct first_bloc*);
+	assert(mem == get_system_memory_adr());
+	assert(taille == get_system_memory_size());
+
 	/* ... */
 	mem_fit(&mem_fit_first);
 }
 
 void mem_show(void (*print)(void *, size_t, int)) {
-	/* ... */
-	while (/* ... */ 0) {
-		/* ... */
-		print(/* ... */NULL, /* ... */0, /* ... */0);
+	pfb begin = ((first_bloc*)memory_addr)->begin;
+	while (begin != NULL) {
+		if (begin + begin->size != begin->next){
+			print(/* ... */NULL, /* ... */0, /* ... */0);
+		}
 		/* ... */
 	}
 }
 
 static mem_fit_function_t *mem_fit_fn;
+
 void mem_fit(mem_fit_function_t *f) {
 	mem_fit_fn=f;
 }
 
 void *mem_alloc(size_t taille) {
 	/* ... */
-	__attribute__((unused)) /* juste pour que gcc compile ce squelette avec -Werror */
-	struct fb *fb=mem_fit_fn(/*...*/NULL, /*...*/0);
+	/* __attribute__((unused))  juste pour que gcc compile ce squelette avec -Werror */
+	struct fb *fb=mem_fit_fn( ((first_bloc*)memory_addr)->begin, taille);
+	if(fb != NULL){
+		struct fb temp;
+		pfb previous = ((first_bloc*)memory_addr)->begin;
+
+		/* finir d'update l'allocation */
+		temp = *fb;
+		fb->size = fb->size - taille;	
+
+		/* cherche le bloc qui pointé sur l'adresse du bloc vide */
+		while(previous->next != fb){
+			previous = previous->next;
+		}
+	}
 	/* ... */
 	return NULL;
 }
@@ -56,7 +108,13 @@ void mem_free(void* mem) {
 
 
 struct fb* mem_fit_first(struct fb *list, size_t size) {
-	return NULL;
+	while(size > list->size){
+		if (list->next == NULL){
+			return NULL;
+		}
+		list = list->next;
+	}
+	return list;
 }
 
 /* Fonction à faire dans un second temps
