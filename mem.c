@@ -104,7 +104,7 @@ void *mem_alloc(size_t taille) {
 				/* update the pointer of free bloc */
 
 				/*tmp contain the next address of the free_bloc*/
-				pfree_bloc tmp;
+				pfree_bloc tmp = NULL;
 				tmp->next = fb->next;
 
 				/* we allocate the fb bloc by casting it in bloc used and affecting its size*/
@@ -119,18 +119,19 @@ void *mem_alloc(size_t taille) {
 				/* if there is not enough space for sizeof(free_bloc) (ie another free slot to allocate),
 				 we allocate all the freebloc */
 			} else {
-				((bloc_used*)fb)->sizeUsed = (pfree_bloc)fb->size;
+				((bloc_used*)fb)->sizeUsed = ((pfree_bloc)fb)->size;
 				previous->next = fb->next;
 			}
 
-
-
-
-
 		} else {
 			((bloc_used*)(memory_addr + sizeof(first_bloc)))->sizeUsed = taille; 
-			((first_bloc*)memory_addr)->begin += taille + sizeof(bloc_used); 
-			((first_bloc*)memory_addr)->begin->size -= taille + sizeof(bloc_used); 
+			//((first_bloc*)memory_addr)->begin += taille + sizeof(bloc_used); 
+
+			first_bloc* fb = (memory_addr);
+			
+			fb->begin = (void*)(fb->begin) + taille + sizeof(bloc_used);
+			
+			fb->begin->size -= taille + sizeof(bloc_used); 
 		}
 		return fb + sizeof(bloc_used);
 	}
