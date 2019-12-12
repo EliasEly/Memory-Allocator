@@ -29,7 +29,7 @@ struct fb {
 	/* ... */
 };
 
-typedef struct fb* pfb;
+typedef struct fb* pfb; // pointeur free block
 
 struct first_bloc_ {
 	size_t sizeG;
@@ -66,11 +66,20 @@ void mem_init(void* mem, size_t taille)
 }
 
 void mem_show(void (*print)(void *, size_t, int)) {
-	pfb begin = ((first_bloc*)memory_addr)->begin;
-	while (begin != NULL) {
-		if (begin + begin->size != begin->next){
-			print(/* ... */NULL, /* ... */0, /* ... */0);
+//	pfb begin = memory_addr +sizeof(first_bloc);
+//	pfb next_zl = begin->next;
+	pfb free_bloc = ((free_bloc*)memory_addr)
+	bloc_used* moving = memory_addr + sizeof(first_bloc);
+	while (moving != get_system_memory_adr()+get_memory_size()) {
+		if (moving != (bloc_used) free_bloc){
+			print(moving, moving->sizeUsed,0);
 		}
+		else
+		{
+			print(moving, moving->sizeUsed,0);
+			free_bloc = free_bloc + moving->sizeUsed;
+		}
+		
 		/* ... */
 	}
 }
