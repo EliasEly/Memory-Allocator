@@ -87,32 +87,54 @@ void mem_fit(mem_fit_function_t *f) {
 void *mem_alloc(size_t taille) {
 	/* __attribute__((unused))  juste pour que gcc compile ce squelette avec -Werror */
 																/* size for the user + the metadata needed */
-	struct free_bloc *free_bloc=mem_fit_fn(((first_bloc*)memory_addr)->begin, taille + sizeof(bloc_used));
+	struct free_bloc *fb=mem_fit_fn(((first_bloc*)memory_addr)->begin, taille + sizeof(bloc_used));
 	/* free_bloc means free_bloc; here i get either the address to allocate or NULL which means do nothing*/
-	if(free_bloc != NULL){
+	if(fb != NULL){
 		pfree_bloc previous = ((first_bloc*)memory_addr)->begin;
 		/* previous means the block that were pointing at that free bloc*/
-		if (free_bloc != ((first_bloc*)memory_addr)->begin){
+		if (fb != ((first_bloc*)memory_addr)->begin){
 
-		/* check if the first free bloc is the one returned */
-			while(previous->next != free_bloc){
+			/* check if the first free bloc is the one returned */
+			while(previous->next != fb){
 				previous = previous->next;
 			}
+			
+			/*check if there is enough space for the metadata of a free_bloc*/
+			if ((fb->size - taille - sizeof(bloc_used)) > sizeof(struct free_bloc)){
+				/* update the pointer of free bloc */
 
-			/* update the pointer of free bloc */
-			previous->next = free_bloc + taille + sizeof(bloc_used);
-			((bloc_used*)free_bloc)->sizeUsed = taille;
-			((pfree_bloc)previous->next)->size -= taille + sizeof(bloc_used); 
-			/*check wether there is enough space */
+				/*tmp contain the next address of the free_bloc*/
+				pfree_bloc tmp;
+				tmp->next = fb->next;
+
+				/* we allocate the fb bloc by casting it in bloc used and affecting its size*/
+				((bloc_used*)fb)->sizeUsed = taille;
+
+				/* update the address */
+				previous->next = fb + taille + sizeof(bloc_used);
+				((pfree_bloc)previous->next)->size -= taille + sizeof(bloc_used);		
+				((pfree_bloc)(fb+taille+sizeof(bloc_used)))->next = tmp->next;
+				
+				
+				/* if there is not enough space for sizeof(free_bloc) (ie another free slot to allocate),
+				 we allocate all the freebloc */
+			} else {
+				((bloc_used*)fb)->sizeUsed = (pfree_bloc)fb->size;
+				previous->next = fb->next;
+			}
+
+
+
+
 
 		} else {
 			((bloc_used*)(memory_addr + sizeof(first_bloc)))->sizeUsed = taille; 
 			((first_bloc*)memory_addr)->begin += taille + sizeof(bloc_used); 
 			((first_bloc*)memory_addr)->begin->size -= taille + sizeof(bloc_used); 
 		}
-		return free_bloc + sizeof(bloc_used);
+		return fb + sizeof(bloc_used);
 	}
-	return free_bloc;
+	return fb;
 }
 
 
