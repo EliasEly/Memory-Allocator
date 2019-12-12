@@ -1,6 +1,5 @@
 #include "mem.h"
 #include "common.h"
-
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
@@ -21,22 +20,20 @@ static inline void *get_system_memory_adr() {
 	return memory_addr;
 }
 
-
 /* struct for free block */
-struct fb {
+struct free_bloc {
 	size_t size;
-	struct fb* next;
-	/* ... */
+	struct free_bloc* next;
 };
 
-typedef struct fb* pfb; // pointeur free block
+typedef struct free_bloc* pfree_block;
 
-struct first_bloc_ {
+struct first_bloc {
 	size_t sizeG;
-	pfb begin;
+	pfree_block begin;
 };
 
-typedef struct first_bloc_ first_bloc;
+typedef struct first_bloc first_bloc;
 
 struct bloc_used_ {
 	size_t sizeUsed;
@@ -55,32 +52,27 @@ void mem_init(void* mem, size_t taille)
 	/* Création du bloc jaune */
         memory_addr = mem;
         ((first_bloc*)memory_addr)->sizeG = taille;
-        ((first_bloc*)memory_addr)->begin = memory_addr + 1;
+        ((first_bloc*)memory_addr)->begin = memory_addr + sizeof(first_bloc);
         ((first_bloc*)memory_addr)->begin->next = NULL;
-        ((first_bloc*)memory_addr)->begin->size = taille - sizeof(struct first_bloc*);
+        ((first_bloc*)memory_addr)->begin->size = taille - sizeof(struct first_bloc);
 	assert(mem == get_system_memory_adr());
 	assert(taille == get_system_memory_size());
-
-	/* ... */
 	mem_fit(&mem_fit_first);
 }
 
 void mem_show(void (*print)(void *, size_t, int)) {
-//	pfb begin = memory_addr +sizeof(first_bloc);
-//	pfb next_zl = begin->next;
-	pfb free_bloc = ((free_bloc*)memory_addr)
+	pfree_block free_bloc = ((first_bloc*)memory_addr)->begin;
 	bloc_used* moving = memory_addr + sizeof(first_bloc);
-	while (moving != get_system_memory_adr()+get_memory_size()) {
-		if (moving != (bloc_used) free_bloc){
-			print(moving, moving->sizeUsed,0);
+	void* end_mem = get_system_memory_adr() + get_system_memory_size();
+
+	while((void*)moving < end_mem){
+		if ((pfree_block)moving != free_bloc){
+			print(moving, moving->sizeUsed, 0);
+		} else {
+			print(moving, moving->sizeUsed, 1);
+			free_bloc = free_bloc->next;
 		}
-		else
-		{
-			print(moving, moving->sizeUsed,0);
-			free_bloc = free_bloc + moving->sizeUsed;
-		}
-		
-		/* ... */
+		moving = (bloc_used*)((void*)moving + moving->sizeUsed);
 	}
 }
 
@@ -91,33 +83,38 @@ void mem_fit(mem_fit_function_t *f) {
 }
 
 void *mem_alloc(size_t taille) {
-	/* ... */
 	/* __attribute__((unused))  juste pour que gcc compile ce squelette avec -Werror */
-	struct fb *fb=mem_fit_fn( ((first_bloc*)memory_addr)->begin, taille);
-	if(fb != NULL){
-		struct fb temp;
-		pfb previous = ((first_bloc*)memory_addr)->begin;
+																/* size for the user + the metadata needed */
+	struct free_bloc *free_bloc=mem_fit_fn(((first_bloc*)memory_addr)->begin, taille + sizeof(bloc_used));
+	/* free_bloc means free_bloc; here i get either the address to allocate or NULL which means do nothing*/
+	if(free_bloc != NULL){
+		pfree_block previous = ((first_bloc*)memory_addr)->begin;
+		/* previous means the block that were pointing at that free block*/
+		if (free_bloc != ((first_bloc*)memory_addr)->begin){
 
-		/* finir d'update l'allocation */
-		temp = *fb;
-		fb->size = fb->size - taille;	
+		/* check if the first free block is the one returned */
+			while(previous->next != free_bloc){
+				previous = previous->next;
+			}
 
-		/* cherche le bloc qui pointé sur l'adresse du bloc vide */
-		while(previous->next != fb){
-			previous = previous->next;
+			/* update the pointer of free block */
+			previous->next = free_bloc + taille + sizeof(bloc_used);
+			((bloc_used*)free_bloc)->sizeUsed = taille;
+			((pfree_block)previous->next)->size -= taille + sizeof(bloc_used); 
+			/**/ 
+
+		} else {
+			((first_bloc*)memory_addr)->begin += taille + sizeof(bloc_used); 
 		}
 	}
-	/* ... */
-	return NULL;
+	return free_bloc;
 }
-
 
 void mem_free(void* mem) {
 }
 
-
-struct fb* mem_fit_first(struct fb *list, size_t size) {
-	while(size > list->size){
+struct free_bloc* mem_fit_first(struct free_bloc *list, size_t size) {
+	while(size > list->size + sizeof(bloc_used)){
 		if (list->next == NULL){
 			return NULL;
 		}
@@ -144,10 +141,10 @@ size_t mem_get_size(void *zone) {
 /* Fonctions facultatives
  * autres stratégies d'allocation
  */
-struct fb* mem_fit_best(struct fb *list, size_t size) {
+struct free_bloc* mem_fit_best(struct free_bloc *list, size_t size) {
 	return NULL;
 }
 
-struct fb* mem_fit_worst(struct fb *list, size_t size) {
+struct free_bloc* mem_fit_worst(struct free_bloc *list, size_t size) {
 	return NULL;
 }
