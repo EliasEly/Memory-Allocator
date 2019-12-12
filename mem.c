@@ -1,5 +1,6 @@
 #include "mem.h"
 #include "common.h"
+
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
@@ -20,17 +21,18 @@ static inline void *get_system_memory_adr() {
 	return memory_addr;
 }
 
+
 /* struct for free block */
 struct free_bloc {
 	size_t size;
 	struct free_bloc* next;
 };
 
-typedef struct free_bloc* pfree_block;
+typedef struct free_bloc* pfree_bloc;
 
 struct first_bloc {
 	size_t sizeG;
-	pfree_block begin;
+	pfree_bloc begin;
 };
 
 typedef struct first_bloc first_bloc;
@@ -61,12 +63,12 @@ void mem_init(void* mem, size_t taille)
 }
 
 void mem_show(void (*print)(void *, size_t, int)) {
-	pfree_block free_bloc = ((first_bloc*)memory_addr)->begin;
+	pfree_bloc free_bloc = ((first_bloc*)memory_addr)->begin;
 	bloc_used* moving = memory_addr + sizeof(first_bloc);
 	void* end_mem = get_system_memory_adr() + get_system_memory_size();
 
 	while((void*)moving < end_mem){
-		if ((pfree_block)moving != free_bloc){
+		if ((pfree_bloc)moving != free_bloc){
 			print(moving, moving->sizeUsed, 0);
 		} else {
 			print(moving, moving->sizeUsed, 1);
@@ -88,30 +90,36 @@ void *mem_alloc(size_t taille) {
 	struct free_bloc *free_bloc=mem_fit_fn(((first_bloc*)memory_addr)->begin, taille + sizeof(bloc_used));
 	/* free_bloc means free_bloc; here i get either the address to allocate or NULL which means do nothing*/
 	if(free_bloc != NULL){
-		pfree_block previous = ((first_bloc*)memory_addr)->begin;
-		/* previous means the block that were pointing at that free block*/
+		pfree_bloc previous = ((first_bloc*)memory_addr)->begin;
+		/* previous means the block that were pointing at that free bloc*/
 		if (free_bloc != ((first_bloc*)memory_addr)->begin){
 
-		/* check if the first free block is the one returned */
+		/* check if the first free bloc is the one returned */
 			while(previous->next != free_bloc){
 				previous = previous->next;
 			}
 
-			/* update the pointer of free block */
+			/* update the pointer of free bloc */
 			previous->next = free_bloc + taille + sizeof(bloc_used);
 			((bloc_used*)free_bloc)->sizeUsed = taille;
-			((pfree_block)previous->next)->size -= taille + sizeof(bloc_used); 
-			/**/ 
+			((pfree_bloc)previous->next)->size -= taille + sizeof(bloc_used); 
+			/*check wether there is enough space */
 
 		} else {
+			((bloc_used*)(memory_addr + sizeof(first_bloc)))->sizeUsed = taille; 
 			((first_bloc*)memory_addr)->begin += taille + sizeof(bloc_used); 
+			((first_bloc*)memory_addr)->begin->size -= taille + sizeof(bloc_used); 
 		}
+		return free_bloc + sizeof(bloc_used);
 	}
 	return free_bloc;
 }
 
+
 void mem_free(void* mem) {
+
 }
+
 
 struct free_bloc* mem_fit_first(struct free_bloc *list, size_t size) {
 	while(size > list->size + sizeof(bloc_used)){
