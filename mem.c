@@ -153,7 +153,10 @@ void mem_free(void* mem) {
 	__uint8_t* next_bloc = addr_mem + size_mem;
 
 	__uint8_t* free_previous = (__uint8_t*)((first_bloc*)get_system_memory_adr())->begin;
+	size_t sfree_previous = ((pfree_bloc)free_previous)->size;
+
 	__uint8_t* free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
+	size_t sfree_next = ((pfree_bloc)free_next)->size;
 
 	/* while(free_previous < addr_mem){
 		__uint8_t* moving = (__uint8_t*)((pfree_bloc)free_previous)->next;
@@ -196,14 +199,14 @@ void mem_free(void* mem) {
 		}
 	}
 
-	free_previous = (__uint8_t*)((first_bloc*)get_system_memory_adr())->begin;
-	size_t sfree_previous = ((pfree_bloc)free_previous)->size;
 	if (addr_mem + size_mem == free_previous){
 		((pfree_bloc)addr_mem)->size = size_mem +  sfree_previous;
 		((pfree_bloc)addr_mem)->next =((pfree_bloc)free_previous)->next;
+
+	} else {
+	((pfree_bloc)addr_mem)->next = (pfree_bloc)free_previous;
 	}
 	((first_bloc*)get_system_memory_adr())->begin = (pfree_bloc)addr_mem;
-	((pfree_bloc)addr_mem)->next = (pfree_bloc)free_previous;
 
 
 
