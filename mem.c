@@ -131,7 +131,7 @@ void *mem_alloc(size_t taille) {
 			}
 
 		} else {
-			
+
 			__uint8_t* addr = (__uint8_t*)fb;
 			pfree_bloc	next_free_bloc = (pfree_bloc)(addr+ alloc_size);
 			first_bloc* meta_dataGlobal = get_system_memory_adr();
@@ -142,52 +142,72 @@ void *mem_alloc(size_t taille) {
 			((bloc_used*)fb)->sizeUsed = alloc_size;  
 
 		}
-		return fb + sizeof(bloc_used);
+		return fb;
 	}
 	return fb;
 }
 
 void mem_free(void* mem) {
-	__uint8_t* addr_mem = (__uint8_t*) mem - sizeof(bloc_used);
+	__uint8_t* addr_mem = ((__uint8_t*)mem);
 	size_t size_mem = ((bloc_used*)addr_mem)->sizeUsed;
 	__uint8_t* next_bloc = addr_mem + size_mem;
 
 	__uint8_t* free_previous = (__uint8_t*)((first_bloc*)get_system_memory_adr())->begin;
 	__uint8_t* free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
 
+	/* while(free_previous < addr_mem){
+		__uint8_t* moving = (__uint8_t*)((pfree_bloc)free_previous)->next;
+		if ( moving > addr_mem || moving == NULL){
+			free_previous = moving;
+			break;
+		} else {
+			free_previous = (__uint8_t*)((pfree_bloc)free_previous)->next;
+		}
+	}
+
+	 so far i have the closet bloc to addr_mem*/
+
+
 	while(free_previous < addr_mem){
 		size_t sfree_previous = ((pfree_bloc)free_previous)->size;
-		size_t sfree_next = ((pfree_bloc)free_next)->size;
 		
 		if (sfree_previous + free_previous == addr_mem){
 		
 			((pfree_bloc)free_previous)->size = sfree_previous + size_mem;
 		
+			if(free_next != NULL){
+			size_t sfree_next = ((pfree_bloc)free_next)->size;
+			
 			if(next_bloc == free_next + sfree_next){
 				((pfree_bloc)free_previous)->size = sfree_previous + sfree_next;
 				((pfree_bloc)free_previous)->next = ((pfree_bloc)free_next)->next;
+				}
 			}
 			return;
+			
 		} else if (next_bloc == free_next){
 			((pfree_bloc)free_previous)->next = (pfree_bloc)addr_mem;
 			((pfree_bloc)addr_mem)->next = ((pfree_bloc)free_next)->next;
-			((pfree_bloc)addr_mem)->size = size_mem + sfree_next;
+			return;
 		}
-		
+		free_previous = free_next;
+		if (free_next != NULL){
+			free_next = (__uint8_t*)((pfree_bloc)free_next)->next;
+		}
 	}
 
+	free_previous = (__uint8_t*)((first_bloc*)get_system_memory_adr())->begin;
+	size_t sfree_previous = ((pfree_bloc)free_previous)->size;
+	if (addr_mem + size_mem == free_previous){
+		((pfree_bloc)addr_mem)->size = size_mem +  sfree_previous;
+		((pfree_bloc)addr_mem)->next =((pfree_bloc)free_previous)->next;
+	}
+	((first_bloc*)get_system_memory_adr())->begin = (pfree_bloc)addr_mem;
+	((pfree_bloc)addr_mem)->next = (pfree_bloc)free_previous;
 
 
-		/*		This block is dealing with the case of ZL ZO ZL
-		size_t sfree_previous = ((pfree_bloc)free_previous)->size;
-		if (sfree_previous + free_previous == addr_mem){
-			((pfree_bloc)free_previous)->size = sfree_previous + size_mem;
-		}
-		if (((pfree_bloc)free_previous)->next != NULL && (__uint8_t*)((pfree_bloc)free_previous)->next == next_bloc){
-			((pfree_bloc)free_previous)->size = sfree_previous + ((pfree_bloc)free_previous)->size;
-			((pfree_bloc)free_previous)->next = ((pfree_bloc)free_previous)->next->next;
-		}
-		*/
+
+	return;
 }
 
 
