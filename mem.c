@@ -55,6 +55,21 @@ struct bloc_used_ {
 	size_t sizeUsed;
 };
 
+};
+
+typedef struct free_bloc* pfree_bloc;
+
+struct first_bloc {
+	size_t sizeG;
+	pfree_bloc begin;
+};
+
+typedef struct first_bloc first_bloc;
+
+struct bloc_used_ {
+	size_t sizeUsed;
+};
+
 typedef struct bloc_used_ bloc_used;
 
 
@@ -69,6 +84,7 @@ size_t ALIGN_SIZE(size_t taille){
 
 void mem_init(void* mem, size_t taille)
 {
+
 	/* Création du bloc jaune */
         memory_addr = mem;
         ((first_bloc*)memory_addr)->sizeG = taille;
@@ -160,6 +176,54 @@ void *mem_alloc(size_t taille) {
 	return fb;
 }
 
+
+			/* check if the first free bloc is the one returned */
+			while(previous->next != fb){
+				previous = previous->next;
+			}
+			
+			/*check if there is enough space for the metadata of a free_bloc*/
+			if ((fb->size - taille - sizeof(bloc_used)) > sizeof(struct free_bloc)){
+				/* update the pointer of free bloc */
+
+				/*tmp contain the next address of the free_bloc*/
+				pfree_bloc tmp = fb->next;
+
+				/* we allocate the fb bloc by casting it in bloc used and affecting its size*/
+				((bloc_used*)fb)->sizeUsed = taille;
+				previous->next = (pfree_bloc)(((__uint8_t*)fb) + alloc_size);
+
+				((pfree_bloc)previous->next)->size -= alloc_size;	
+
+				((pfree_bloc) (((__uint8_t*)fb) + alloc_size))->next = tmp;
+				
+				
+				/* if there is not enough space for sizeof(free_bloc) (ie another free slot to allocate),
+				 we allocate all the freebloc */
+			} else {
+
+				((bloc_used*)fb)->sizeUsed = ((pfree_bloc)fb)->size;
+				previous->next = fb->next;
+
+			}
+
+		} else {
+
+			__uint8_t* addr = (__uint8_t*)fb;
+			pfree_bloc	next_free_bloc = (pfree_bloc)(addr+ alloc_size);
+			first_bloc* meta_dataGlobal = get_system_memory_adr();
+			meta_dataGlobal->begin = next_free_bloc;
+			meta_dataGlobal->begin->size = fb->size - alloc_size;
+			meta_dataGlobal->begin->next =NULL;
+
+			((bloc_used*)fb)->sizeUsed = alloc_size;  
+
+		}
+		return fb;
+	}
+	return fb;
+}
+
 void mem_free(void* mem) {
 	__uint8_t* addr_mem = ((__uint8_t*)mem);
 	size_t size_mem = ((bloc_used*)addr_mem)->sizeUsed;
@@ -169,19 +233,6 @@ void mem_free(void* mem) {
 	size_t sfree_previous = ((pfree_bloc)free_previous)->size;
 
 	__uint8_t* free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
-
-	/* while(free_previous < addr_mem){
-		__uint8_t* moving = (__uint8_t*)((pfree_bloc)free_previous)->next;
-		if ( moving > addr_mem || moving == NULL){
-			free_previous = moving;
-			break;
-		} else {
-			free_previous = (__uint8_t*)((pfree_bloc)free_previous)->next;
-		}
-	}
-
-	 so far i have the closet bloc to addr_mem*/
-
 
 	while(free_previous < addr_mem){
 		sfree_previous = ((pfree_bloc)free_previous)->size;
