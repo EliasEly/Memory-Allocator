@@ -13,5 +13,3 @@ jobs:
       run: make
     - name: test_init
       run: ./test_init
-    - name: test
-      run: ./test
