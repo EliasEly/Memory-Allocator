@@ -12,6 +12,7 @@
 #define ALIGNMENT 16
 #endif
 
+
 /* La seule variable globale autorisée
  * On trouve à cette adresse la taille de la zone mémoire
  */
@@ -45,9 +46,13 @@ typedef struct bloc_used_ bloc_used;
 
 
 static inline size_t get_system_memory_size() {
-	return ((first_bloc*)memory_addr)->sizeG;
+	return *(size_t*)memory_addr;
 }
 
+
+size_t ALIGN_SIZE(size_t taille){
+	return taille + (ALIGNMENT - taille % ALIGNMENT);
+}
 
 void mem_init(void* mem, size_t taille)
 {
@@ -65,16 +70,16 @@ void mem_init(void* mem, size_t taille)
 void mem_show(void (*print)(void *, size_t, int)) {
 	pfree_bloc free_bloc = ((first_bloc*)memory_addr)->begin;
 	bloc_used* moving = memory_addr + sizeof(first_bloc);
-	void* end_mem = get_system_memory_adr() + get_system_memory_size();
+	__uint8_t* end_mem = get_system_memory_adr() + get_system_memory_size();
 
-	while((void*)moving < end_mem){
+	while((__uint8_t*)moving < end_mem){
 		if ((pfree_bloc)moving != free_bloc){
 			print(moving, moving->sizeUsed, 0);
 		} else {
 			print(moving, moving->sizeUsed, 1);
 			free_bloc = free_bloc->next;
 		}
-		moving = (bloc_used*)((void*)moving + moving->sizeUsed);
+		moving = (bloc_used*)(((__uint8_t*)moving) + moving->sizeUsed);
 	}
 }
 
@@ -85,10 +90,11 @@ void mem_fit(mem_fit_function_t *f) {
 }
 
 void *mem_alloc(size_t taille) {
+	size_t alloc_size = ALIGN_SIZE(taille + sizeof(bloc_used));
 	/* __attribute__((unused))  juste pour que gcc compile ce squelette avec -Werror */
 																/* size for the user + the metadata needed */
-	struct free_bloc *fb=mem_fit_fn(((first_bloc*)memory_addr)->begin, taille + sizeof(bloc_used));
-	/* free_bloc means free_bloc; here i get either the address to allocate or NULL which means do nothing*/
+	struct free_bloc *fb=mem_fit_fn(((first_bloc*)memory_addr)->begin, alloc_size);
+	/* here i get either the address to allocate or NULL which means do nothing*/
 	if(fb != NULL){
 		pfree_bloc previous = ((first_bloc*)memory_addr)->begin;
 		/* previous means the block that were pointing at that free bloc*/
@@ -104,34 +110,37 @@ void *mem_alloc(size_t taille) {
 				/* update the pointer of free bloc */
 
 				/*tmp contain the next address of the free_bloc*/
-				pfree_bloc tmp = NULL;
-				tmp->next = fb->next;
+				pfree_bloc tmp = fb->next;
 
 				/* we allocate the fb bloc by casting it in bloc used and affecting its size*/
 				((bloc_used*)fb)->sizeUsed = taille;
+				previous->next = (pfree_bloc)(((__uint8_t*)fb) + alloc_size);
 
-				/* update the address */
-				previous->next = fb + taille + sizeof(bloc_used);
-				((pfree_bloc)previous->next)->size -= taille + sizeof(bloc_used);		
-				((pfree_bloc)(fb+taille+sizeof(bloc_used)))->next = tmp->next;
+				((pfree_bloc)previous->next)->size -= alloc_size;	
+
+				((pfree_bloc) (((__uint8_t*)fb) + alloc_size))->next = tmp;
 				
 				
 				/* if there is not enough space for sizeof(free_bloc) (ie another free slot to allocate),
 				 we allocate all the freebloc */
 			} else {
+
 				((bloc_used*)fb)->sizeUsed = ((pfree_bloc)fb)->size;
 				previous->next = fb->next;
+
 			}
 
 		} else {
-			((bloc_used*)(memory_addr + sizeof(first_bloc)))->sizeUsed = taille; 
-			//((first_bloc*)memory_addr)->begin += taille + sizeof(bloc_used); 
+			
+			__uint8_t* addr = (__uint8_t*)fb;
+			pfree_bloc	next_free_bloc = (pfree_bloc)(addr+ alloc_size);
+			first_bloc* meta_dataGlobal = get_system_memory_adr();
+			meta_dataGlobal->begin = next_free_bloc;
+			meta_dataGlobal->begin->size = fb->size - alloc_size;
+			meta_dataGlobal->begin->next =NULL;
 
-			first_bloc* fb = (memory_addr);
-			
-			fb->begin = (void*)(fb->begin) + taille + sizeof(bloc_used);
-			
-			fb->begin->size -= taille + sizeof(bloc_used); 
+			((bloc_used*)fb)->sizeUsed = alloc_size;  
+
 		}
 		return fb + sizeof(bloc_used);
 	}
@@ -140,12 +149,27 @@ void *mem_alloc(size_t taille) {
 
 
 void mem_free(void* mem) {
+	__uint8_t* addr_mem = (__uint8_t*) mem - sizeof(bloc_used);
+	size_t size_mem = ((bloc_used*)addr_mem)->sizeUsed;
+	__uint8_t* next_bloc = addr_mem + size_mem;
 
+	__uint8_t* free_previous = (__uint8_t*)((first_bloc*)get_system_memory_adr())->begin;
+
+		/*		This block is dealing with the case of ZL ZO ZL
+		size_t sfree_previous = ((pfree_bloc)free_previous)->size;
+		if (sfree_previous + free_previous == addr_mem){
+			((pfree_bloc)free_previous)->size = sfree_previous + size_mem;
+		}
+		if (((pfree_bloc)free_previous)->next != NULL && (__uint8_t*)((pfree_bloc)free_previous)->next == next_bloc){
+			((pfree_bloc)free_previous)->size = sfree_previous + ((pfree_bloc)free_previous)->size;
+			((pfree_bloc)free_previous)->next = ((pfree_bloc)free_previous)->next->next;
+		}
+		*/
 }
 
 
 struct free_bloc* mem_fit_first(struct free_bloc *list, size_t size) {
-	while(size > list->size + sizeof(bloc_used)){
+	while(size > list->size){
 		if (list->next == NULL){
 			return NULL;
 		}
