@@ -12,6 +12,19 @@
 #define ALIGNMENT 16
 #endif
 
+/* La seule variable globale autorisée
+ * On trouve à cette adresse la taille de la zone mémoire
+ */
+static void* memory_addr;
+
+static inline void *get_system_memory_adr() {
+	return memory_addr;
+}
+
+static inline size_t get_system_memory_size() {
+	return *(size_t*)memory_addr;
+}
+
 
 /* La seule variable globale autorisée
  * On trouve à cette adresse la taille de la zone mémoire
@@ -56,6 +69,7 @@ size_t ALIGN_SIZE(size_t taille){
 
 void mem_init(void* mem, size_t taille)
 {
+
 	/* Création du bloc jaune */
         memory_addr = mem;
         ((first_bloc*)memory_addr)->sizeG = taille;
@@ -156,19 +170,6 @@ void mem_free(void* mem) {
 	size_t sfree_previous = ((pfree_bloc)free_previous)->size;
 
 	__uint8_t* free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
-
-	/* while(free_previous < addr_mem){
-		__uint8_t* moving = (__uint8_t*)((pfree_bloc)free_previous)->next;
-		if ( moving > addr_mem || moving == NULL){
-			free_previous = moving;
-			break;
-		} else {
-			free_previous = (__uint8_t*)((pfree_bloc)free_previous)->next;
-		}
-	}
-
-	 so far i have the closet bloc to addr_mem*/
-
 
 	while(free_previous < addr_mem){
 		sfree_previous = ((pfree_bloc)free_previous)->size;
