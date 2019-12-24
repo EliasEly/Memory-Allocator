@@ -147,13 +147,36 @@ void *mem_alloc(size_t taille) {
 	return fb;
 }
 
-
 void mem_free(void* mem) {
 	__uint8_t* addr_mem = (__uint8_t*) mem - sizeof(bloc_used);
 	size_t size_mem = ((bloc_used*)addr_mem)->sizeUsed;
 	__uint8_t* next_bloc = addr_mem + size_mem;
 
 	__uint8_t* free_previous = (__uint8_t*)((first_bloc*)get_system_memory_adr())->begin;
+	__uint8_t* free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
+
+	while(free_previous < addr_mem){
+		size_t sfree_previous = ((pfree_bloc)free_previous)->size;
+		size_t sfree_next = ((pfree_bloc)free_next)->size;
+		
+		if (sfree_previous + free_previous == addr_mem){
+		
+			((pfree_bloc)free_previous)->size = sfree_previous + size_mem;
+		
+			if(next_bloc == free_next + sfree_next){
+				((pfree_bloc)free_previous)->size = sfree_previous + sfree_next;
+				((pfree_bloc)free_previous)->next = ((pfree_bloc)free_next)->next;
+			}
+			return;
+		} else if (next_bloc == free_next){
+			((pfree_bloc)free_previous)->next = (pfree_bloc)addr_mem;
+			((pfree_bloc)addr_mem)->next = ((pfree_bloc)free_next)->next;
+			((pfree_bloc)addr_mem)->size = size_mem + sfree_next;
+		}
+		
+	}
+
+
 
 		/*		This block is dealing with the case of ZL ZO ZL
 		size_t sfree_previous = ((pfree_bloc)free_previous)->size;
