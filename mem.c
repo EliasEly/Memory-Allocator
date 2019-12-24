@@ -156,7 +156,6 @@ void mem_free(void* mem) {
 	size_t sfree_previous = ((pfree_bloc)free_previous)->size;
 
 	__uint8_t* free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
-	size_t sfree_next = ((pfree_bloc)free_next)->size;
 
 	/* while(free_previous < addr_mem){
 		__uint8_t* moving = (__uint8_t*)((pfree_bloc)free_previous)->next;
@@ -172,7 +171,7 @@ void mem_free(void* mem) {
 
 
 	while(free_previous < addr_mem){
-		size_t sfree_previous = ((pfree_bloc)free_previous)->size;
+		sfree_previous = ((pfree_bloc)free_previous)->size;
 		
 		if (sfree_previous + free_previous == addr_mem){
 		
@@ -181,9 +180,10 @@ void mem_free(void* mem) {
 			if(free_next != NULL){
 			size_t sfree_next = ((pfree_bloc)free_next)->size;
 			
-			if(next_bloc == free_next + sfree_next){
+			if(next_bloc == free_next){
+				sfree_previous = ((pfree_bloc)free_previous)->size;
 				((pfree_bloc)free_previous)->size = sfree_previous + sfree_next;
-				((pfree_bloc)free_previous)->next = ((pfree_bloc)free_next)->next;
+				((pfree_bloc)free_previous)->next =((pfree_bloc)free_next)->next;
 				}
 			}
 			return;
