@@ -20,9 +20,6 @@ all: $(PROGRAMS)
 %.o: %.c
 	$(CC) -c $(CFLAGS) -MMD -MF .$@.deps -o $@ $<
 
-#tests: tests.o
-#	gcc -o tests tests.o tests.o -Wall -O
-
 # dépendences des binaires
 $(PROGRAMS) libmalloc.so: %: mem.o common.o
 

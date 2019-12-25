@@ -1,1 +1,0 @@
-tests.o: tests.c mem.h common.h
