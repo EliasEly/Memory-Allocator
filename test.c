@@ -37,6 +37,14 @@ void use_of_test(){
     printf("q - Quitter\n");
 }
 
+void n_for_next(){
+    printf("\n\npress n for next : ");
+    char c = getchar();
+    while (c != 'n'){
+        c = getchar();
+    }
+    system("clear");
+}
 
 int main(int argc, char** argv){
     char buffer[TAILLE_BUFFER];
@@ -55,6 +63,9 @@ int main(int argc, char** argv){
             printf("\n");
             break;
         case '2':
+            system("clear");
+            /* free in ascending order of the address the case of ZO ZO ZO ZL then ZL ZO ZO ZL and so on.. */
+            printf("TEST 1 WITH FREE : \n");
             mem_init(get_memory_adr(), 512);
             allocate_mem_test(128);
             printf("\n");
@@ -62,9 +73,28 @@ int main(int argc, char** argv){
             printf("\n");
             for(int i = 0; i<3; i++){
                 mem_free(get_memory_adr() + (16 + 144 *i));
+                mem_show(afficher_zone);    
+                printf("\n");
             }
+
+            n_for_next();
+
+            printf("TEST 2 WITH FREE : \n");
+            /*memory full, and we free from the very end*/
+            mem_init(get_memory_adr(), 512);
+            allocate_mem_test(128);
+            /*in fact 48 + the metadata represents the left space*/
+            mem_alloc(48);
+            printf("\n");
             mem_show(afficher_zone);
             printf("\n");
+            mem_free(get_memory_adr()+512-64);
+            for(int i = 3; i>=0; i--){
+                mem_free(get_memory_adr() + (16 + 144 *i));
+                mem_show(afficher_zone);    
+                printf("\n");
+            }
+            n_for_next();
             break;
         case 'q':
             printf("Bye!\n");
