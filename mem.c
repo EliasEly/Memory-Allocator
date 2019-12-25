@@ -183,7 +183,11 @@ void mem_free(void* mem) {
 			((pfree_bloc)addr_mem)->next = ((pfree_bloc)free_next)->next;
 			return;
 		}
+		if (free_next != NULL){
 		free_previous = free_next;
+		} else {
+			break;
+		}
 		if (free_next != NULL){
 			free_next = (__uint8_t*)((pfree_bloc)free_next)->next;
 		}
