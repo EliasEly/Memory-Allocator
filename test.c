@@ -84,7 +84,8 @@ int main(int argc, char** argv){
             mem_init(get_memory_adr(), 512);
             allocate_mem_test(128);
             /*in fact 48 + the metadata represents the left space*/
-            mem_alloc(48);
+            void* result = mem_alloc(48);
+            printf("%d Bytes were allocated at %ld\n",48, (result - (void*)get_memory_adr()));
             printf("\n");
             mem_show(afficher_zone);
             printf("\n");
