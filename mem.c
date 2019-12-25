@@ -177,7 +177,9 @@ void mem_free(void* mem) {
 			return;
 			
 		} else if (next_bloc == free_next){
+			size_t sfree_next = ((pfree_bloc)free_next)->size;
 			((pfree_bloc)free_previous)->next = (pfree_bloc)addr_mem;
+			((pfree_bloc)addr_mem)->size = size_mem + sfree_next;
 			((pfree_bloc)addr_mem)->next = ((pfree_bloc)free_next)->next;
 			return;
 		}
