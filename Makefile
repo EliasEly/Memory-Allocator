@@ -10,7 +10,7 @@ CFLAGS+= -DDEBUG
 CFLAGS+= -fPIC
 LDFLAGS= $(HOST32)
 TESTS+=test_init
-PROGRAMS=memshell $(TESTS)
+PROGRAMS=memshell test $(TESTS)
 
 .PHONY: clean all test_ls
 

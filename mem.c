@@ -51,7 +51,11 @@ static inline size_t get_system_memory_size() {
 
 
 size_t ALIGN_SIZE(size_t taille){
-	return taille + (ALIGNMENT - taille % ALIGNMENT);
+	if (taille % ALIGNMENT == 0){
+		return taille;
+	} else {
+		return taille + (ALIGNMENT - taille % ALIGNMENT);
+	}
 }
 
 void mem_init(void* mem, size_t taille)
@@ -91,24 +95,17 @@ void mem_fit(mem_fit_function_t *f) {
 
 void *mem_alloc(size_t taille) {
 	size_t alloc_size = ALIGN_SIZE(taille + sizeof(bloc_used));
-	/* __attribute__((unused))  juste pour que gcc compile ce squelette avec -Werror */
-																/* size for the user + the metadata needed */
+	/* size for the user + the metadata needed */
 	struct free_bloc *fb=mem_fit_fn(((first_bloc*)memory_addr)->begin, alloc_size);
 	/* here i get either the address to allocate or NULL which means do nothing*/
 	if(fb != NULL){
 		pfree_bloc previous = ((first_bloc*)memory_addr)->begin;
-		/* previous means the block that were pointing at that free bloc*/
 		if (fb != ((first_bloc*)memory_addr)->begin){
-
-			/* check if the first free bloc is the one returned */
 			while(previous->next != fb){
 				previous = previous->next;
-			}
-			
+			}	
 			/*check if there is enough space for the metadata of a free_bloc*/
 			if ((fb->size - taille - sizeof(bloc_used)) > sizeof(struct free_bloc)){
-				/* update the pointer of free bloc */
-
 				/*tmp contain the next address of the free_bloc*/
 				pfree_bloc tmp = fb->next;
 
@@ -153,12 +150,16 @@ void mem_free(void* mem) {
 	__uint8_t* next_bloc = addr_mem + size_mem;
 
 	__uint8_t* free_previous = (__uint8_t*)((first_bloc*)get_system_memory_adr())->begin;
-	size_t sfree_previous = ((pfree_bloc)free_previous)->size;
+	size_t sfree_previous = 0;
+	__uint8_t* free_next = NULL;
 
-	__uint8_t* free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
+	if (free_previous != NULL) {
+	sfree_previous = ((pfree_bloc)free_previous)->size;
+	free_next = (__uint8_t*)(((first_bloc*)get_system_memory_adr())->begin->next);
+	}
 
 
-	while(free_previous < addr_mem){
+	while(free_previous < addr_mem && free_previous != NULL){
 		sfree_previous = ((pfree_bloc)free_previous)->size;
 		
 		if (sfree_previous + free_previous == addr_mem){
